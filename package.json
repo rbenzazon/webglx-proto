@@ -1,0 +1,22 @@
+{
+  "name": "webglx-proto",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "webgl",
+    "framework",
+    "3d",
+    "reactive",
+    "declarative"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:rbenzazon/webglx-proto.git"
+  },
+  "author": "Raphael Benzazon <raphael.benzazon@gmail.com>",
+  "license": "MIT"
+}
