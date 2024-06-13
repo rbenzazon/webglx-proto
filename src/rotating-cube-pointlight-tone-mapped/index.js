@@ -76,6 +76,7 @@ gl.shaderSource(vertexShader, `
         vertex = vec3(world * vec4(position, 1.0));
         // Pass the normal down to the fragment shader
         vNormal = vec3(normalMatrix * vec4(normal, 1.0));
+        //vNormal = normal;
         
         // Pass the position down to the fragment shader
         gl_Position = projection * view * world * vec4(position, 1.0);
@@ -93,6 +94,7 @@ gl.shaderSource(fragmentShader, `
     varying vec3 vNormal;    
     varying vec3 fragColor;
 
+    // tone mapping taken from three.js
     float toneMappingExposure = 1.0;
 
     // Matrices for rec 2020 <> rec 709 color space conversion
@@ -198,8 +200,8 @@ gl.shaderSource(fragmentShader, `
         float diffuse = max(dot(direction, vNormal), 0.0);
         float attenuation = 40.0 / (1.0 + 0.4 * distance * distance);
         float brightness = max(diffuse * attenuation,0.1);
-
-        gl_FragColor = vec4(AgXToneMapping(brightness*fragColor),1.0);
+        // gl_FragColor = vec4(AgXToneMapping(brightness*fragColor),1.0);
+        gl_FragColor = vec4((vNormal.x+1.0)/2.0,(vNormal.y+1.0)/2.0,(vNormal.z+1.0)/2.0,1.0);
     }
 `)
 gl.compileShader(fragmentShader)
