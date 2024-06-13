@@ -200,8 +200,9 @@ gl.shaderSource(fragmentShader, `
         float diffuse = max(dot(direction, vNormal), 0.0);
         float attenuation = 40.0 / (1.0 + 0.4 * distance * distance);
         float brightness = max(diffuse * attenuation,0.1);
-        // gl_FragColor = vec4(AgXToneMapping(brightness*fragColor),1.0);
-        gl_FragColor = vec4((vNormal.x+1.0)/2.0,(vNormal.y+1.0)/2.0,(vNormal.z+1.0)/2.0,1.0);
+        
+        gl_FragColor = vec4(AgXToneMapping(brightness*fragColor),1.0);
+        //gl_FragColor = vec4((vNormal.x+1.0)/2.0,(vNormal.y+1.0)/2.0,(vNormal.z+1.0)/2.0,1.0);
     }
 `)
 gl.compileShader(fragmentShader)

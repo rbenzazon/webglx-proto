@@ -117,6 +117,103 @@ gl.shaderSource(fragmentShader, `
     varying vec3 vNormal;    
     varying vec3 fragColor;
 
+    // tone mapping taken from three.js
+    float toneMappingExposure = 1.0;
+
+    // Matrices for rec 2020 <> rec 709 color space conversion
+    // matrix provided in row-major order so it has been transposed
+    // https://www.itu.int/pub/R-REP-BT.2407-2017
+    const mat3 LINEAR_REC2020_TO_LINEAR_SRGB = mat3(
+        vec3( 1.6605, - 0.1246, - 0.0182 ),
+        vec3( - 0.5876, 1.1329, - 0.1006 ),
+        vec3( - 0.0728, - 0.0083, 1.1187 )
+    );
+
+    const mat3 LINEAR_SRGB_TO_LINEAR_REC2020 = mat3(
+        vec3( 0.6274, 0.0691, 0.0164 ),
+        vec3( 0.3293, 0.9195, 0.0880 ),
+        vec3( 0.0433, 0.0113, 0.8956 )
+    );
+
+    vec3 OptimizedCineonToneMapping( vec3 color ) {
+        // optimized filmic operator by Jim Hejl and Richard Burgess-Dawson
+        color *= toneMappingExposure;
+        color = max( vec3( 0.0 ), color - 0.004 );
+        return pow( ( color * ( 6.2 * color + 0.5 ) ) / ( color * ( 6.2 * color + 1.7 ) + 0.06 ), vec3( 2.2 ) );
+
+    }
+
+    // https://iolite-engine.com/blog_posts/minimal_agx_implementation
+    // Mean error^2: 3.6705141e-06
+    vec3 agxDefaultContrastApprox( vec3 x ) {
+
+        vec3 x2 = x * x;
+        vec3 x4 = x2 * x2;
+
+        return + 15.5 * x4 * x2
+            - 40.14 * x4 * x
+            + 31.96 * x4
+            - 6.868 * x2 * x
+            + 0.4298 * x2
+            + 0.1191 * x
+            - 0.00232;
+
+    }
+        
+    vec3 AgXToneMapping( vec3 color ) {
+
+        // AgX constants
+        const mat3 AgXInsetMatrix = mat3(
+            vec3( 0.856627153315983, 0.137318972929847, 0.11189821299995 ),
+            vec3( 0.0951212405381588, 0.761241990602591, 0.0767994186031903 ),
+            vec3( 0.0482516061458583, 0.101439036467562, 0.811302368396859 )
+        );
+
+        // explicit AgXOutsetMatrix generated from Filaments AgXOutsetMatrixInv
+        const mat3 AgXOutsetMatrix = mat3(
+            vec3( 1.1271005818144368, - 0.1413297634984383, - 0.14132976349843826 ),
+            vec3( - 0.11060664309660323, 1.157823702216272, - 0.11060664309660294 ),
+            vec3( - 0.016493938717834573, - 0.016493938717834257, 1.2519364065950405 )
+        );
+
+        // LOG2_MIN      = -10.0
+        // LOG2_MAX      =  +6.5
+        // MIDDLE_GRAY   =  0.18
+        const float AgxMinEv = - 12.47393;  // log2( pow( 2, LOG2_MIN ) * MIDDLE_GRAY )
+        const float AgxMaxEv = 4.026069;    // log2( pow( 2, LOG2_MAX ) * MIDDLE_GRAY )
+
+        color *= toneMappingExposure;
+
+        color = LINEAR_SRGB_TO_LINEAR_REC2020 * color;
+
+        color = AgXInsetMatrix * color;
+
+        // Log2 encoding
+        color = max( color, 1e-10 ); // avoid 0 or negative numbers for log2
+        color = log2( color );
+        color = ( color - AgxMinEv ) / ( AgxMaxEv - AgxMinEv );
+
+        color = clamp( color, 0.0, 1.0 );
+
+        // Apply sigmoid
+        color = agxDefaultContrastApprox( color );
+
+        // Apply AgX look
+        // v = agxLook(v, look);
+
+        color = AgXOutsetMatrix * color;
+
+        // Linearize
+        color = pow( max( vec3( 0.0 ), color ), vec3( 2.2 ) );
+
+        color = LINEAR_REC2020_TO_LINEAR_SRGB * color;
+
+        // Gamut mapping. Simple clamp for now.
+        color = clamp( color, 0.0, 1.0 );
+
+        return color;
+
+    }
 
     void main() {
         vec3 offset = lightPosition - vertex;
@@ -124,9 +221,9 @@ gl.shaderSource(fragmentShader, `
         vec3 direction = normalize(offset);
 
         float diffuse = max(dot(direction, vNormal), 0.0);
-        float attenuation = 1.0 / (1.0 + 0.1*distance + 0.8*distance*distance);
+        float attenuation = 3.0 / (1.0 + 0.1*distance + 0.1*distance*distance);
         float brightness = max(diffuse * attenuation,0.1);
-        gl_FragColor = vec4(brightness*fragColor,1.0);
+        gl_FragColor = vec4(AgXToneMapping(brightness*fragColor),1.0);
         //gl_FragColor = vec4(vNormal,1.0);
     }
 `)
@@ -173,7 +270,7 @@ gl.uniformMatrix4fv(projectionLocation, false, projection)
 const viewLocation = gl.getUniformLocation(program, "view")
 const view = new Float32Array(16);
 
-lookAt(view, [0, 0, -8], [0, 0, 0], [0, 1, 0]);
+lookAt(view, [0, 0, -20], [0, 0, 0], [0, 1, 0]);
 gl.uniformMatrix4fv(viewLocation, false, view)
 
 
@@ -192,7 +289,7 @@ transpose(normalMatrix, normalMatrix);
 gl.uniformMatrix4fv(normalMatrixLocation, false, normalMatrix);
 
 const lightPositionLocation = gl.getUniformLocation(program, "lightPosition")
-const lightPosition = [0, 2, -1];
+let lightPosition = [0, 2, -1];
 gl.uniform3fv(lightPositionLocation, lightPosition);
 
 var identityMatrix = new Float32Array(16);
@@ -259,9 +356,10 @@ modelMatrices.forEach((mat, index) => {
 function transformInstances(){
     const angle = 0.002 * Math.PI;
     modelMatrices.forEach((mat, index) => {
-        rotateY(mat,mat,angle);
-        rotateX(mat,mat,angle/1.7);
-        rotateZ(mat,mat,angle/1.7);
+        const instanceShift = index*0.0005*Math.PI;
+        rotateY(mat,mat,angle+instanceShift);
+        rotateX(mat,mat,angle/1.7+instanceShift);
+        rotateZ(mat,mat,angle/1.7+instanceShift);
     });
 }
 
@@ -292,13 +390,19 @@ for (let i = 0; i < 4; ++i) {
   ext.vertexAttribDivisorANGLE(loc, 1);
 }
 
+function getCirclePoint(center,radius, angle){
+    console.log(center,radius,angle);
+    return [center[0] + radius * Math.cos(angle), center[1] + radius * Math.sin(angle)];
+}
+
 
 function loop(){
     /*const angle = performance.now() / 1000 /6 * 2 * Math.PI;
     rotate(yRotation, identityMatrix, angle, [0,1,0]);
     rotate(xRotation, identityMatrix, angle / 4, [1,0,0]);*/
     //mul(world, yRotation, xRotation);
-
+    lightPosition = [...getCirclePoint([0,0],3,performance.now() / 1000 /6 * 2 * Math.PI), -2];
+    gl.uniform3fv(lightPositionLocation, lightPosition);
     /*normalMatrix = create();
     invert(normalMatrix, view);
     transpose(normalMatrix, normalMatrix);
