@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "dev": "vite",
-    "build": "vite build"
+    "build": "vite build",
+    "compile": "node src/compiler/index.mjs"
   },
   "keywords": [
     "webgl",
@@ -26,6 +27,10 @@
     "vite": "^5.2.12"
   },
   "devDependencies": {
-    "spectorjs": "^0.9.30"
+    "acorn": "^8.12.0",
+    "esrap": "^1.2.2",
+    "estree-walker": "^3.0.3",
+    "spectorjs": "^0.9.30",
+    "zimmerframe": "^1.1.2"
   }
 }

@@ -1,0 +1,41 @@
+/**
+ * @property {attribute-vec3} position - vertice position
+ * @property {attribute-vec3} normal - vertice normal vector
+ * @property {uniform-mat4} world - world matrix
+ * @property {uniform-mat4} view - view matrix
+ * @property {uniform-mat4} projection - projection matrix
+ * @property {uniform-mat4} normalMatrix - normal matrix
+ * @property {varying-vec3} fragColor - fragment color
+ * @property {varying-vec3} vNormal - vertex normal
+ * @property {varying-vec3} vertex - vertex position
+ */
+
+precision mediump float;
+    
+attribute vec3 ${position};
+attribute vec3 ${normal};
+
+uniform mat4 ${world};
+uniform mat4 ${view};
+uniform mat4 ${projection};
+uniform mat4 ${normalMatrix};
+
+// Pass the color attribute down to the fragment shader
+varying vec3 fragColor;
+varying vec3 vNormal;
+varying vec3 vertex;
+
+void main() {
+    
+
+    // Pass the color down to the fragment shader
+    fragColor = ${color};
+    // Pass the vertex down to the fragment shader
+    vertex = vec3(${world} * vec4(${position}, 1.0));
+    // Pass the normal down to the fragment shader
+    vNormal = vec3(${normalMatrix} * vec4(${normal}, 1.0));
+    //vNormal = normal;
+    
+    // Pass the position down to the fragment shader
+    gl_Position = ${projection} * ${view} * ${world} * vec4(${position}, 1.0);
+}

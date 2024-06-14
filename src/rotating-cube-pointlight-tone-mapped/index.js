@@ -21,9 +21,10 @@ let contextAttributes = {
 }
 
 const canvas = document.getElementById("webglCanvas");
-
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+const canvasRect = canvas.getBoundingClientRect();
+console.log(canvasRect);
+canvas.width = canvasRect.width;
+canvas.height = canvasRect.height;
 /**
  * Represents a WebGL rendering context.
  * @type {WebGLRenderingContext}

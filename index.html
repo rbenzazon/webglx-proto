@@ -5,17 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>minimal viable webgl example</title>
     <style>
-        body {
+        * {
             margin: 0;
             padding: 0;
-            overflow: hidden;
-            background: linear-gradient(45deg, pink, yellow);
-            position: relative;
+            box-sizing: border-box;
         }
+        body, html { height:100%; }
         canvas {
-            position: absolute;
-            width: 100vw;
-            height: 100vh;
+            position:absolute;
+            width:100%;
+            height:100%;
         }
     </style>
 </head>

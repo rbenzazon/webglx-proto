@@ -1,0 +1,19 @@
+precision mediump float;
+
+uniform vec3 ${lightPosition};
+
+varying vec3 vertex;
+varying vec3 vNormal;    
+varying vec3 fragColor;
+
+
+void main() {
+    vec3 offset = ${lightPosition} - vertex;
+    float distance = length(offset);
+    vec3 direction = normalize(offset);
+
+    float diffuse = max(dot(direction, vNormal), 0.0);
+    float attenuation = 3.0 / (1.0 + 0.1*distance + 0.1*distance*distance);
+    float brightness = max(diffuse * attenuation,0.1);
+    gl_FragColor = vec4(brightness*fragColor,1.0);
+}

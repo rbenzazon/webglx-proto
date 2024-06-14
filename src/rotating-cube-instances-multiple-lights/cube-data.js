@@ -30,6 +30,44 @@ export const positionsData = new Float32Array([
 1.0, -1.0, 1.0,
 1.0, -1.0, -1.0,
 ]);
+export const getPositionsData = (size = 1) => {
+
+    size = size /2;
+    const positions = [
+        // top
+        -size, size, -size,
+        -size, size, size,
+        size, size, size,
+        size, size, -size,
+        // left
+        -size, size, size,
+        -size, -size, size,
+        -size, -size, -size,
+        -size, size, -size,
+        // right
+        size, size, size,
+        size, -size, size,
+        size, -size, -size,
+        size, size, -size,
+        // front
+        size, size, size,
+        size, -size, size,
+        -size, -size, size,
+        -size, size, size,
+        // back
+        size, size, -size,
+        size, -size, -size,
+        -size, -size, -size,
+        -size, size, -size,
+        // bottom
+        -size, -size, -size,
+        -size, -size, size,
+        size, -size, size,
+        size, -size, -size,
+    ];
+
+    return new Float32Array(positions);
+};
 
 export const normalsData = new Float32Array([
     //top
