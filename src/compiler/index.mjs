@@ -4,7 +4,10 @@ import { walk } from 'zimmerframe';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { type } from 'os';
+import { elementsData, normalsData, positionsData } from './elements/geometry/cube/cube-data.mjs';
+import { getShaders } from './elements/shaders.mjs';
+import { getUniforms, uniforms } from './elements/uniforms.mjs';
+import { getAttributes, attributes } from './elements/attributes.mjs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -83,7 +86,13 @@ export function compile(code) {
                     type: 'Cube',
                     identifier: path.at(-1).id,
                     size: node.arguments[0],
-                    position: node.arguments[1]
+                    position: node.arguments[1],
+                    color: node.arguments[2],
+                    geometry: {
+                        vertices: positionsData,
+                        normals: normalsData,
+                        elements: elementsData
+                    }
                 });
 
             }else if(node.callee.object.name === state.app.identifier.name && node.callee.property.name === 'add'){
@@ -104,76 +113,68 @@ export function compile(code) {
 
     //do whatever you want with the ast
     const output = [];
+    
     const renderer = fs.readFileSync(__dirname+'/elements/renderer.js', 'utf8');
     output.push(renderer);
     
-    
-    const attributes = {
-        position: {
-            type: 'vec3',
-        },
-        normal: {
-            type: 'vec3',
-        }
-    }
-    const uniforms = {
-        world: {
-            type: 'mat4',
-            
-        },
-        view: {
-            type: 'mat4',
-            
-        },
-        projection: {
-            type: 'mat4',
-            
-        },
-        normalMatrix: {
-            type: 'mat4',
-            
-        },
-    }
-    const color = [2.55,2.55,2.55]
-    const lightPosition = [0,0,0];
+    //this supports only one light
+    const lightPosition = JSON.parse(print(state.scene.instances.lights[0].position).code);//[0,0,0];
     const props = {
         // put the names of the uniforms and attributes in the fragment
         ...Object.fromEntries(Object.entries(attributes).map(([key, value]) => [key,key])),
         ...Object.fromEntries(Object.entries(uniforms).map(([key, value]) => [key,key])),
         // put the values of these constants in the fragments
-        color:renderArrayToGLSLFloat(color),
-        lightPosition:renderArrayToGLSLFloat(lightPosition)
+        color:renderArrayToGLSLFloat(print(state.scene.instances.objects[0].color).code),
+        lightPosition:{
+            value:renderArrayToGLSLFloat(lightPosition),
+            name:'lightPosition'
+        }
     }
-    const vertexShaderString = fs.readFileSync(__dirname+'/elements/vertex-shader.glslx', 'utf8');
-    const fragmentShaderString = fs.readFileSync(__dirname+'/elements/fragment-shader.glslx', 'utf8');
-    const vertexRendered = templateLiteralRenderer(props,vertexShaderString);
-    const fragmentRendered = templateLiteralRenderer(props,fragmentShaderString);
-    output.push(`const vertexShaderSource = \`${vertexRendered}\`;`);
-    output.push('const vertexShader = gl.createShader(gl.VERTEX_SHADER);')
-    output.push('gl.shaderSource(vertexShader, vertexShaderSource);')
-    output.push('gl.compileShader(vertexShader);')
+    output.push(...getShaders(props,__dirname));
 
-    output.push(`const fragmentShaderSource = \`${fragmentRendered}\`;`);
-    output.push('const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);')
-    output.push('gl.shaderSource(fragmentShader, fragmentShaderSource);')
-    output.push('gl.compileShader(fragmentShader);')
+    output.push('gl.linkProgram(program)')
+    output.push('console.log(gl.getProgramInfoLog(program),gl.getProgramParameter(program, gl.LINK_STATUS),);')
+    output.push('if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {')
+        output.push(`console.error('ERROR linking program!', gl.getProgramInfoLog(program));`);
+    output.push('}')
+
+    output.push('gl.validateProgram(program);')
+    output.push('console.log(gl.getProgramParameter(program, gl.VALIDATE_STATUS));')
+    output.push('if (!gl.getProgramParameter(program, gl.VALIDATE_STATUS)) {')
+        output.push(`console.error('ERROR validating program!', gl.getProgramInfoLog(program));`);
+    output.push('}')
+
+    output.push('gl.useProgram(program);')
+    output.push(...getUniforms());
+    console.log("state.scene.instances.objects[0].geometry.vertices",state.scene.instances.objects[0].geometry.vertices);
+    if(state.scene.instances.objects[0].geometry){
+        output.push(`const positionsData = new Float32Array(${JSON.stringify(state.scene.instances.objects[0].geometry.vertices)});`);
+        output.push(`const normalsData = new Float32Array(${JSON.stringify(state.scene.instances.objects[0].geometry.normals)});`);
+        output.push(`const elementsData = new Uint16Array(${JSON.stringify(state.scene.instances.objects[0].geometry.elements)});`);
+        output.push(...getAttributes());
+    }
+    //output.push(getLightSettings());
+    output.push(getRenderInstruction());
     console.log(output.join('\n'));
-
-    return print(ast);
+    //print(ast);
+    return output.join('\n');
 }
 
-const templateGenerator = (props,template) => {
-    return (propsValues) => Function.constructor.apply(
-        this,[...props,`return \`${template}\``]
-    ).apply(this,propsValues);
-}
-const templateLiteralRenderer = (props,template) => {
-    return templateGenerator(Object.keys(props),template)(Object.values(props));
+
+const getRenderInstruction = () => {
+    return `
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.drawElements(gl.TRIANGLES, elementsData.length, gl.UNSIGNED_SHORT, 0);
+    `;
 }
 
 function renderArrayToGLSLFloat(array){
+    if(typeof array === 'string'){
+        array = JSON.parse(array);
+    }
     const types = ['', 'vec2', 'vec3', 'vec4'];
     return `${types[array.length-1]}(${array.map(val=>val.toLocaleString("en", { minimumFractionDigits: 1 })).join(',')})`;
 }
 
-compile(code);
+const appCode = compile(code);
+fs.writeFileSync(__dirname+'/../compiler-output-test/index.js', appCode);

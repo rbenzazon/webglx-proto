@@ -1,6 +1,6 @@
 precision mediump float;
 
-uniform vec3 ${lightPosition};
+uniform vec3 ${lightPosition.name};
 
 varying vec3 vertex;
 varying vec3 vNormal;    
@@ -8,7 +8,7 @@ varying vec3 fragColor;
 
 
 void main() {
-    vec3 offset = ${lightPosition} - vertex;
+    vec3 offset = ${lightPosition.value} - vertex;
     float distance = length(offset);
     vec3 direction = normalize(offset);
 

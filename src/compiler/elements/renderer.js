@@ -1,3 +1,4 @@
+const canvas = document.getElementById("webglCanvas");
 const canvasRect = canvas.getBoundingClientRect();
 canvas.width = canvasRect.width;
 canvas.height = canvasRect.height;

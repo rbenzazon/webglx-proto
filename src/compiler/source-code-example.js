@@ -8,5 +8,5 @@ const pointLight1 = PointLight(1,[0, 0, 0]);
 // add point light
 app.add(pointLight1);
 
-const cube = Cube(1, [0, 0, 0]);
+const cube = Cube(1, [0, 0, 0],[2.55,2.55,2.55]);
 app.add(cube);

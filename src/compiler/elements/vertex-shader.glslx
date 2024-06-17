@@ -1,14 +1,12 @@
-/**
- * @property {attribute-vec3} position - vertice position
- * @property {attribute-vec3} normal - vertice normal vector
- * @property {uniform-mat4} world - world matrix
- * @property {uniform-mat4} view - view matrix
- * @property {uniform-mat4} projection - projection matrix
- * @property {uniform-mat4} normalMatrix - normal matrix
- * @property {varying-vec3} fragColor - fragment color
- * @property {varying-vec3} vNormal - vertex normal
- * @property {varying-vec3} vertex - vertex position
- */
+//@property {attribute-vec3} position - vertice position
+//@property {attribute-vec3} normal - vertice normal vector
+//@property {uniform-mat4} world - world matrix
+//@property {uniform-mat4} view - view matrix
+//@property {uniform-mat4} projection - projection matrix
+//@property {uniform-mat4} normalMatrix - normal matrix
+//@property {varying-vec3} fragColor - fragment color
+//@property {varying-vec3} vNormal - vertex normal
+//@property {varying-vec3} vertex - vertex position
 
 precision mediump float;
     
